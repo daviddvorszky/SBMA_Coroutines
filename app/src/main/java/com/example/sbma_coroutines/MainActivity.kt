@@ -4,16 +4,22 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.TextView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MainActivity : AppCompatActivity() {
     class Account {
+        private val mutex = Mutex()
         private var amount: Double = 0.0
         suspend fun deposit_coroutine(amount: Double) {
-            val x = this.amount
-            delay(1) // simulates processing time
-            this.amount = x + amount
+            mutex.withLock {
+                val x = this.amount
+                delay(1) // simulates processing time
+                this.amount = x + amount
+            }
         }
         fun saldo(): Double = amount
     }
@@ -40,12 +46,13 @@ class MainActivity : AppCompatActivity() {
         }
         withTimeMeasurement("Two coroutines together", isActive = true) {
             runBlocking {
-                launch {
+                val job1 = launch {
                     for (i in 1..1000) tili2.deposit_coroutine(1.0)
                 }
-                launch {
+                val job2 = launch {
                     for (i in 1..1000) tili2.deposit_coroutine(1.0)
                 }
+                joinAll(job1, job2)
                 findViewById<TextView>(R.id.idSaldo2).text = "Saldo2: ${tili2.saldo()}"
             }
         }
